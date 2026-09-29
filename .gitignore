@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.file-rag/
+dist/
+image.id
+*.rhyven.json
