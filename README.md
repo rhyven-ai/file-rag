@@ -1,4 +1,4 @@
-# File RAG
+# Wobbegong
 
 A standalone Python script and optional Rhyven app for file-level retrieval.
 Python 3.10+ and Git on Linux/macOS; Python standard library only. No embedding database,
@@ -14,18 +14,18 @@ source text. Summaries and the vocabulary can still disclose source information.
 ```sh
 # Summarize a selected folder; skip .gitignore matches and additional exclusions.
 # Requires the model configuration shown below.
-python3 file_rag.py summarize project/ --exclude 'docs/drafts/**' --exclude '**/*.generated.py'
+python3 wobbegong.py summarize project/ --exclude 'docs/drafts/**' --exclude '**/*.generated.py'
 
 # Model-free BM25; summaries remain explicitly empty.
-python3 file_rag.py index --root /path/to/project --no-summaries
-python3 file_rag.py search 'cache aware routing' --root /path/to/project
-python3 file_rag.py search 'cache' --root /path/to/project --content --top-k 5
+python3 wobbegong.py index --root /path/to/project --no-summaries
+python3 wobbegong.py search 'cache aware routing' --root /path/to/project
+python3 wobbegong.py search 'cache' --root /path/to/project --content --top-k 5
 
 # Generate summaries through your chosen Chat Completions-compatible endpoint.
 export RAG_BASE_URL=http://localhost:8000/v1
 export RAG_MODEL=your-model
 # Optional: RAG_API_KEY; SSL_CERT_FILE for a custom CA.
-python3 file_rag.py index --root /path/to/project
+python3 wobbegong.py index --root /path/to/project
 ```
 
 Only changed/new files or files still missing summaries require model calls.
@@ -43,7 +43,10 @@ The index is not a snapshot of concurrently edited source files. Searches read
 current sources, mark hash mismatches `stale`, skip missing/non-text/symlink or
 oversized files, and retain the last indexed ranking until reindexing.
 
-Default storage: `ROOT/.file-rag`. `--index-dir` overrides it (relative to cwd).
+Default storage: `ROOT/.wobbegong`. Each immutable generation contains
+`wobbegong.db`; `CURRENT` selects the published generation. Existing
+`ROOT/.file-rag` caches are reused when a new cache has not been published.
+Legacy `bm25.sqlite` generations remain readable. `--index-dir` overrides it (relative to cwd).
 Move source and index together to relocate. Index directories are trusted local
 state. UTF-8 text only; default file limit 10 MiB. Symlinks, hidden paths and
 common build/cache directories are skipped, including `.venv`, `.venvs`, `venv`,
@@ -97,7 +100,8 @@ No dependency on Laya, OpenJev, an embedding model or a reranker is installed.
 
 ## Rhyven — no Docker
 
-Install `rhyven/file-rag` with Rhyven 0.4.0-rc.9 or later. The host needs Python
+The marketplace name is **Wobbegong**. Its stable install ID remains
+`rhyven/file-rag` so existing collections retain their data. Install it with Rhyven 0.4.0-rc.9 or later. The host needs Python
 3.10+ and Git. Rhyven prepares the Python environment; there are no pip packages.
 
 ```sh
@@ -107,6 +111,11 @@ rhyven --collection demo install rhyven/file-rag
 
 Review and accept `host.execute` before installation. Native code runs as your
 OS user; its environment isolates dependencies, not host access.
+
+App version **0.3.0** introduces the Wobbegong name and storage defaults.
+`file_rag.py` remains a compatible entry point. Existing app indexes and scoped
+summary caches are read in place; no source files or old releases are renamed.
+New app indexes live under each repository’s `.wobbegong` directory.
 
 The action interface works on imported snapshots under the collection's app data
 directory. Reimport changed files and deletions before indexing. The host checkout
@@ -120,7 +129,7 @@ rhyven --collection demo call rhyven_call '{"category":"rhyven/file-rag","functi
 ```
 
 To build from source: `rhyven app validate .`, `rhyven app test . --allow-host`,
-then `rhyven app package . --out file-rag.rhyven.json`. The package embeds the script
+then `rhyven app package . --out wobbegong.rhyven.json`. The package embeds the script
 and action schema. Publishing does not require a container image.
 
 Actions:

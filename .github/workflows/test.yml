@@ -13,4 +13,4 @@ jobs:
       - name: Test
         run: |
           python3 -m unittest discover -s tests -v
-          python3 -m py_compile file_rag.py rhyven_entry.py
+          python3 -m py_compile wobbegong.py file_rag.py rhyven_entry.py
