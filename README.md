@@ -1,6 +1,15 @@
 # Wobbegong
 
 A standalone Python script and optional Rhyven app for file-level retrieval.
+Start an indexing run for a selected folder: Wobbegong automatically scans eligible
+files, applies Git ignore rules and exclusions, and builds its local BM25 index.
+After the run succeeds, your agent can immediately search and read matching files
+through Rhyven’s tools. No separate search service or embedding model is needed.
+
+In the Rhyven app, import source snapshots with `put_files`, then call `index` or
+`summarize`; the scan covers those imported files. Reimport changed files and
+rerun indexing to refresh. Ingestion runs when requested; no background watcher runs.
+
 Python 3.10+ and Git on Linux/macOS; Python standard library only. No embedding database,
 secondary model, Rhyven, or Docker is needed for standalone use.
 
