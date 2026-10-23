@@ -4,3 +4,4 @@ __pycache__/
 dist/
 image.id
 *.rhyven.json
+.wobbegong/

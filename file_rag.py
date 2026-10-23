@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""File RAG: stdlib-only weighted BM25, optional summaries and Rhyven adapter."""
+"""Wobbegong: stdlib-only weighted BM25, optional summaries and Rhyven adapter."""
 from __future__ import annotations
 
 import argparse
@@ -25,7 +25,7 @@ import urllib.request
 VERSION = 1
 FIELDS = {'path': 3.0, 'folder': 0.5, 'summary': 2.0, 'content': 1.0}
 SKIP = {'.git', '.hg', '.svn', '.venv', '.venvs', 'venv', 'venvs', '.env', '.tox', '.nox', '__pycache__', 'node_modules',
-        'target', 'build', 'dist', '.file-rag'}
+        'target', 'build', 'dist', '.file-rag', '.wobbegong'}
 MAX_FILE = 200_000
 MAX_FILES = 100
 MAX_TOTAL = 5_000_000
@@ -110,6 +110,20 @@ def generation(directory):
     if config['version'] != VERSION:
         raise ValueError('Unsupported index version; use a new index directory')
     return result
+
+
+def index_directory(preferred, legacy):
+    """Preserve a published legacy cache until a new cache is explicitly built."""
+    if (preferred / 'CURRENT').exists():
+        return preferred
+    if (legacy / 'CURRENT').exists():
+        return legacy
+    return preferred
+
+
+def database(gen):
+    current = gen / 'wobbegong.db'
+    return current if current.exists() else gen / 'bm25.sqlite'
 
 
 def metadata(gen):
@@ -249,7 +263,7 @@ def build(root, directory, args, supplied=None):
     published = False
     try:
         docs, updated, reused = [], 0, 0
-        with closing(sqlite3.connect(gen / 'bm25.sqlite')) as db:
+        with closing(sqlite3.connect(gen / 'wobbegong.db')) as db:
             db.executescript('''
                 CREATE TABLE lengths(doc TEXT, field TEXT, length INTEGER, PRIMARY KEY(doc,field));
                 CREATE TABLE postings(term TEXT, doc TEXT, field TEXT, tf INTEGER,
@@ -338,7 +352,7 @@ def search(root, directory, args):
             raise ValueError('Invalid field weight')
         weights[field] = value
     scores = defaultdict(float)
-    with closing(sqlite3.connect(f'{(gen / "bm25.sqlite").as_uri()}?mode=ro', uri=True)) as db:
+    with closing(sqlite3.connect(f'{database(gen).as_uri()}?mode=ro', uri=True)) as db:
         avg = dict(db.execute('SELECT field,AVG(length) FROM lengths GROUP BY field'))
         for term in sorted(set(tokens(args.query))):
             row = db.execute('SELECT df FROM stats WHERE term=?', (term,)).fetchone()
@@ -496,8 +510,9 @@ def handle(request):
     if not re.fullmatch(r'[a-zA-Z0-9_-]{1,64}', repository):
         raise ValueError('Invalid repository name')
     base = data / repository
-    root, directory = base / 'sources', base / 'index'
+    root = base / 'sources'
     with lock(base):
+        directory = index_directory(base / '.wobbegong', base / 'index')
         root.mkdir(parents=True, exist_ok=True)
         directory.mkdir(exist_ok=True)
         if action == 'put_files':
@@ -513,7 +528,8 @@ def handle(request):
                     root = root / part
                     if root.is_symlink() or not root.is_dir() or part in SKIP:
                         raise ValueError('Root must be an existing source directory, not a symlink or excluded folder')
-                directory = base / 'scopes' / sha(scope.encode())
+                directory = index_directory(base / '.wobbegong' / 'scopes' / sha(scope.encode()),
+                                            base / 'scopes' / sha(scope.encode()))
                 directory.mkdir(parents=True, exist_ok=True)
             gen = generation(directory)
             saved = [] if gen is None else json.loads((gen / 'config.json').read_text()).get('exclude', [])
@@ -579,7 +595,7 @@ def main(argv=None):
             root = args.root.expanduser().resolve(strict=True)
             if not root.is_dir():
                 raise ValueError('Root must be a directory')
-            directory = (args.index_dir or root / '.file-rag').expanduser().resolve()
+            directory = (args.index_dir or index_directory(root / '.wobbegong', root / '.file-rag')).expanduser().resolve()
             if root == directory or root.is_relative_to(directory):
                 raise ValueError('Index directory cannot equal or contain root')
             if args.max_bytes < 1:

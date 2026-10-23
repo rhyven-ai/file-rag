@@ -1,3 +1,20 @@
+# Wobbegong 0.3.0 verification — 2026-10-23
+
+- All 15 standalone/protocol unit tests passed, including three new compatibility
+  tests for the Wobbegong command/storage defaults and published legacy cache layouts.
+- `app check --allow-host` passed all three conformance cases and produced the
+  exact tested package with display name Wobbegong and stable ID `rhyven/file-rag`.
+- Real three-tool MCP acceptance passed: import, Git ignore rules, caller-written
+  summaries, search, stale hashes, backup/restore, retained reinstall and isolation.
+- A real staged upgrade from the checksum-verified published 0.2.0 package to
+  0.3.0 preserved sources, root/scoped indexes and cached summaries.
+- New caches use `.wobbegong` and generation-local `wobbegong.db`; old `.file-rag`,
+  app `index`/`scopes` and `bm25.sqlite` generations remain readable in place.
+- No real external model was contacted. Summary tests used a localhost fixture.
+  The app remains a native Python/Git package with its existing host permissions.
+
+## Earlier verification
+
 # Local verification — 2026-09-28
 
 - `python3 -m unittest discover -s file-rag/tests -v`: **12 tests passed**.
