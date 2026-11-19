@@ -1,4 +1,4 @@
-"""Upgrade a checksum-verified 0.2.0 package to the current native app in temporary state.
+"""Upgrade a checksum-verified File RAG or Wobbegong package to the current native app in temporary state.
 
 Usage: python3 tests/upgrade_acceptance.py RHYVEN PREVIOUS_PACKAGE
 """
@@ -12,7 +12,7 @@ binary = str(Path(sys.argv[1]).resolve())
 previous = Path(sys.argv[2]).resolve()
 source = Path(__file__).resolve().parents[1]
 old = json.loads(previous.read_text())
-assert old['name'] == 'rhyven/file-rag' and old['version'] == '0.2.0'
+assert old['name'] == 'rhyven/file-rag' and old['version'] in ('0.2.0', '0.3.0', '0.3.1')
 
 with tempfile.TemporaryDirectory(prefix='wobbegong-upgrade-') as tmp:
     home = Path(tmp)
@@ -31,16 +31,17 @@ with tempfile.TemporaryDirectory(prefix='wobbegong-upgrade-') as tmp:
         call('index', root=root, summaries=[{**item, 'summary': 'Cached before rename'} for item in queued['items']])
         assert call('summary_queue', root=root)['items'] == []
 
-    package = home / 'wobbegong.rhyven.json'
+    package = home / 'repository-file-ingestion.rhyven.json'
     cli('app', 'package', source, '--out', package)
     updated = cli('update', package, '--accept-permissions')
     assert Path(updated['recovery_backup']).is_file()
     description = cli('call', 'describe_app', json.dumps({'app': 'rhyven/file-rag'}))
-    assert description['display_name'] == 'Wobbegong' and description['version'] == '0.3.0'
+    assert description['display_name'] == 'Repository File Ingestion'
+    assert description['version'] == json.loads((source / 'app.json').read_text())['version']
     for root, count in [('.', 2), ('project', 1)]:
         results = call('search', root=root, query='cacheTokenUnique')['results']
         assert len(results) == count and all(item['summary'] == 'Cached before rename' for item in results)
         assert not any(item['stale'] for item in results)
         assert call('summary_queue', root=root)['items'] == []
         assert call('summarize', root=root)['summaries_reused'] == count
-    print('PASS: published 0.2.0 to Wobbegong 0.3.0 staged upgrade preserves root/scoped indexes, sources and cached summaries.')
+    print(f"Upgraded published {old['version']} to {description['version']} with root/scoped indexes, sources and cached summaries intact.")
