@@ -1,4 +1,12 @@
-# Wobbegong 0.3.0 verification — 2026-10-23
+# Repository File Ingestion 0.4.0 verification
+
+19 November 2026 · Rhyven 0.9.5 source candidate
+
+The app passed all 15 standalone and protocol tests and all four package conformance cases. Installed three-tool MCP checks covered permissions, Git ignore rules, summaries, stale files, backup/restore and collection isolation. Staged upgrades from the checksum-verified public 0.2.0 and 0.3.1 packages retained repository files, root/scoped indexes and cached summaries.
+
+A repository snapshot spanning two pages fed Wobbegong Collection Search. Both manual search and an automatically enriched prompt cited the same repository-relative file. A failed refresh retained the last committed snapshot. A successful reimport removed a deleted file. The app keeps `rhyven/file-rag` as its install ID.
+
+## Wobbegong 0.3.0 verification — 2026-10-23
 
 - All 15 standalone/protocol unit tests passed, including three new compatibility
   tests for the Wobbegong command/storage defaults and published legacy cache layouts.

@@ -1,40 +1,32 @@
-# Wobbegong
+# Repository File Ingestion
 
-A standalone Python script and optional Rhyven app for file-level retrieval.
-Start an indexing run for a selected folder: Wobbegong automatically scans eligible
-files, applies Git ignore rules and exclusions, and builds its local BM25 index.
-After the run succeeds, your agent can immediately search and read matching files
-through Rhyven’s tools. No separate search service or embedding model is needed.
+Repository File Ingestion collects selected UTF-8 files for a Rhyven collection. The app keeps its install ID `rhyven/file-rag`. In Rhyven 0.9.5, feed its snapshots to **Wobbegong Collection Search** for cited passages in manual queries and automatic prompt enrichment.
 
-In the Rhyven app, import source snapshots with `put_files`, then call `index` or
-`summarize`; the scan covers those imported files. Reimport changed files and
-rerun indexing to refresh. Ingestion runs when requested; no background watcher runs.
+1. Install the 0.4.0 app in the same collection and call `action_put_files` with the repository name and selected files. Include the applicable `.gitignore` files.
+2. Run `rhyven --collection demo wobbegong ingest-repository demo`. Use `--root src` or repeat `--exclude GLOB` to narrow the selection.
+3. Run `rhyven --collection demo wobbegong query "cache lookup"`. Connections with enrichment enabled can use the same passages immediately.
 
-Python 3.10+ and Git on Linux/macOS; Python standard library only. No embedding database,
-secondary model, Rhyven, or Docker is needed for standalone use.
+Repeat the import after changing or deleting a file. Each successful import replaces the selected source. The app also supports optional file summaries and independent file-level search through its own `index` and `search` actions. Building that index is optional for collection search.
 
-Each relative path is one document. Metadata contains only `id`, `path`,
-`folder`, `summary`, and `sha256`. Original files remain the source of truth.
-SQLite stores term frequencies, field lengths and document frequencies, never
-source text. Summaries and the vocabulary can still disclose source information.
+The standalone CLI works with Python 3.10+ and Git on Linux/macOS. Its index stores path, folder, SHA-256, optional summary and BM25 statistics. It reads matched content from the original files.
 
 ## Standalone
 
 ```sh
 # Summarize a selected folder; skip .gitignore matches and additional exclusions.
 # Requires the model configuration shown below.
-python3 wobbegong.py summarize project/ --exclude 'docs/drafts/**' --exclude '**/*.generated.py'
+python3 file_rag.py summarize project/ --exclude 'docs/drafts/**' --exclude '**/*.generated.py'
 
 # Model-free BM25; summaries remain explicitly empty.
-python3 wobbegong.py index --root /path/to/project --no-summaries
-python3 wobbegong.py search 'cache aware routing' --root /path/to/project
-python3 wobbegong.py search 'cache' --root /path/to/project --content --top-k 5
+python3 file_rag.py index --root /path/to/project --no-summaries
+python3 file_rag.py search 'cache aware routing' --root /path/to/project
+python3 file_rag.py search 'cache' --root /path/to/project --content --top-k 5
 
 # Generate summaries through your chosen Chat Completions-compatible endpoint.
 export RAG_BASE_URL=http://localhost:8000/v1
 export RAG_MODEL=your-model
 # Optional: RAG_API_KEY; SSL_CERT_FILE for a custom CA.
-python3 wobbegong.py index --root /path/to/project
+python3 file_rag.py index --root /path/to/project
 ```
 
 Only changed/new files or files still missing summaries require model calls.
@@ -109,9 +101,7 @@ No dependency on Laya, OpenJev, an embedding model or a reranker is installed.
 
 ## Rhyven — no Docker
 
-The marketplace name is **Wobbegong**. Its stable install ID remains
-`rhyven/file-rag` so existing collections retain their data. Install it with Rhyven 0.4.0-rc.9 or later. The host needs Python
-3.10+ and Git. Rhyven prepares the Python environment; there are no pip packages.
+The 0.4.0 source package uses the display name **Repository File Ingestion**. Previously published packages can display **Wobbegong** under the same install ID. The host needs Python 3.10+ and Git. Rhyven prepares the Python environment.
 
 ```sh
 rhyven registry-sync rhyven-ai/registry --anonymous
@@ -121,10 +111,7 @@ rhyven --collection demo install rhyven/file-rag
 Review and accept `host.execute` before installation. Native code runs as your
 OS user; its environment isolates dependencies, not host access.
 
-App version **0.3.0** introduces the Wobbegong name and storage defaults.
-`file_rag.py` remains a compatible entry point. Existing app indexes and scoped
-summary caches are read in place; no source files or old releases are renamed.
-New app indexes live under each repository’s `.wobbegong` directory.
+Both `file_rag.py` and the earlier `wobbegong.py` entry point work with existing indexes and scoped summary caches. New app indexes use each repository’s `.wobbegong` directory.
 
 The action interface works on imported snapshots under the collection's app data
 directory. Reimport changed files and deletions before indexing. The host checkout
@@ -138,13 +125,14 @@ rhyven --collection demo call rhyven_call '{"category":"rhyven/file-rag","functi
 ```
 
 To build from source: `rhyven app validate .`, `rhyven app test . --allow-host`,
-then `rhyven app package . --out wobbegong.rhyven.json`. The package embeds the script
+then `rhyven app package . --out repository-file-ingestion.rhyven.json`. The package embeds the script
 and action schema. Publishing does not require a container image.
 
 Actions:
 
 | Action | Inputs beyond `repository` | Result |
 | --- | --- | --- |
+| `export_documents` | Optional `root`, `exclude`, `offset` | Selected documents, snapshot digest and next offset for collection ingestion |
 | `put_files` | `files: [{path, content}]`, optional `delete: [path]` | Import counts |
 | `index` | Optional `root`, `exclude`, `summaries: [{id, sha256, summary}]` | Build/cache counts |
 | `summarize` | Optional `root`, `exclude` | Build/cache counts, pending IDs/hashes and agent instructions |

@@ -1,4 +1,4 @@
-"""Exercise installed native File RAG through the real three-tool MCP interface."""
+"""Exercise installed Repository File Ingestion through the real three-tool MCP interface."""
 import json
 from pathlib import Path
 import subprocess
@@ -58,6 +58,6 @@ with tempfile.TemporaryDirectory(prefix='file-rag-market-') as temp:
         assert cli('call','rhyven_call',args,collection='restored')['results'][0]['path']=='src/cache.py'
         cli('install',bundle,'--accept-permissions',collection='isolated')
         assert cli('call','rhyven_call',args,collection='isolated',ok=False)['code']=='app_error'
-        print('PASS native Wobbegong: consent, MCP, ignore rules, caller summaries, BM25, stale hashes, recovery, retained state and collection isolation')
+        print('PASS Repository File Ingestion: consent, MCP, ignore rules, caller summaries, BM25, stale hashes, recovery, retained state and collection isolation')
     finally:
         process.stdin.close();process.wait(timeout=5)
